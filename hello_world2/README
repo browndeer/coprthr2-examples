@@ -1,0 +1,5 @@
+"hello, world" C program showing the coprthr_dexecv API
+
+$ make
+$ ./hello_host.x
+

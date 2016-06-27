@@ -1,0 +1,5 @@
+The standard "hello, world" C program.
+
+$ make
+$ ./hello.x
+
