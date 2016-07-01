@@ -1,6 +1,5 @@
 
 DEFS += -DEDIM=4 -DSIZE=128 -DSIZE2=1 -DSIZE3=1 -DMPI_BUF_SIZE=512 
-DEFS += -DLOOP1=1 -DLOOP2=1 -DLOOP3=1
 
 CCFLAGS += -O2 $(DEFS) -g
 INCS = -I. -I/usr/local/browndeer/coprthr2/include 

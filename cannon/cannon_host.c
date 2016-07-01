@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +8,7 @@
 
 #include "coprthr.h"
 #include "coprthr_cc.h"
-#include "coprthr_thread.h"
+//#include "coprthr_thread.h"
 #include "coprthr_mpi.h"
 
 float f2(int n) {
@@ -164,6 +165,12 @@ int main(int argc, char* argv[])
 	printf("main: mpiexec time %f sec\n",time);
 	printf("main: # errors: %d\n", errors);
 
+
 	/* clean up */
+
+	coprthr_dfree(dd,ga_mem);
+	coprthr_dfree(dd,gb_mem);
+	coprthr_dfree(dd,gc_mem);
+
 	coprthr_dclose(dd);
 }

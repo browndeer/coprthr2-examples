@@ -1,10 +1,8 @@
+
 #include <coprthr.h>
-#include <coprthr2.h>
+//#include <coprthr2.h>
 #include <coprthr_mpi.h>
 
-#include "esyscall.h"
-
-#include <host_stdio.h>
 
 // This function performs a serial matrix-matrix multiplication c = a * b
 void MatrixMultiply(int n, float *a, float *b, float *c);
@@ -22,55 +20,63 @@ void __usrmem_call MatrixMatrixMultiply(
 
 	MPI_Comm comm_2d = (MPI_Comm)p_comm_2d;
 
+
 	// Get the communicator related information
 	MPI_Comm_size(comm_2d, &npes);
 	MPI_Comm_rank(comm_2d, &myrank);
+
 
 	// Get the rank and coordinates with respect to the 2D topology
 	MPI_Comm_rank(comm_2d, &my2drank);
 	MPI_Cart_coords(comm_2d, my2drank, 2, mycoords);
 
+
 	// Compute ranks of the up and left shifts
 	MPI_Cart_shift(comm_2d, 0, -1, &rightrank, &leftrank);
 	MPI_Cart_shift(comm_2d, 1, -1, &downrank, &uprank);
 
+
 	// Perform the initial matrix alignment. First for A and then for B
+
 	MPI_Cart_shift(comm_2d, 0, -mycoords[1], &shiftsource, &shiftdest);
-	MPI_Sendrecv_replace(a, n*n, MPI_FLOAT, shiftdest, 1, 
-		shiftsource, 1, comm_2d, &status);
+
+	MPI_Sendrecv_replace(a, n*n, MPI_FLOAT, shiftdest, 1, shiftsource, 1,
+		comm_2d, &status);
 
 	MPI_Cart_shift(comm_2d, 1, -mycoords[0], &shiftsource, &shiftdest);
-	MPI_Sendrecv_replace(b, n*n, MPI_FLOAT, shiftdest, 1, 
-		shiftsource, 1, comm_2d, &status);
 
+	MPI_Sendrecv_replace(b, n*n, MPI_FLOAT, shiftdest, 1, shiftsource, 1,
+		comm_2d, &status);
+
+	
 	// Get into the main computation loop
+
 	for (i=1; i<dim; i++) {
-int loop;
-for(loop=0;loop<LOOP2;loop++)
+
 		MatrixMultiply(n, a, b, c);
 
 		// Shift matrix a left by one and shift matrix b up by one
-		MPI_Sendrecv_replace(a, n*n, MPI_FLOAT, leftrank, 1,
-			rightrank, 1, comm_2d, &status);
-		MPI_Sendrecv_replace(b, n*n, MPI_FLOAT, uprank, 1, 
-			downrank, 1, comm_2d, &status);
+
+		MPI_Sendrecv_replace(a, n*n, MPI_FLOAT, leftrank, 1, rightrank, 1,
+			comm_2d, &status);
+
+		MPI_Sendrecv_replace(b, n*n, MPI_FLOAT, uprank, 1, downrank, 1,
+			comm_2d, &status);
+
 	}
+
 	MatrixMultiply(n, a, b, c);
 }
+
 
 typedef struct { 
 	int N; int s; int d; float* ga; float* gb; float* gc; 
 } my_args_t;
 
+
 void __entry my_thread( void* p) {
 
 	int tid = coprthr_get_thread_id();
-	host_printf("hello from thread %d\n",tid);
-
-	coprthr_ctimer_reset();
-	unsigned int ctime1 = coprthr_ctimer_get();
-
-//	phalt();
 
 	my_args_t* pargs = (my_args_t*)p;
 
@@ -98,71 +104,60 @@ void __entry my_thread( void* p) {
 	float* b = (float*)coprthr_tls_sbrk(n*n*sizeof(float));
 	float* c = (float*)coprthr_tls_sbrk(n*n*sizeof(float));
 
-int loop;
-for(loop=0;loop<LOOP1;loop++) {
 
 	int i,j,k;
 	for (i=0; i<s; i++) {
+
 		for (j=0; j<s; j++) {
+
 			float* rgc = gc + ((i*N + x*n)*s + j)*N + y*n;
+
 			// read C
-		
-			 __coprthr2_memcopy2d_align(c,rgc,n*sizeof(float),s*N*sizeof(float),
+			coprthr_memcopy2d_align(c,rgc,n*sizeof(float),s*N*sizeof(float),
 				n*sizeof(float),n,COPRTHR2_M_DMA_0);
 	
 			for (k=0; k<s; k++) {
+
 				float* rga = ga + ((i*N + x*n)*s + k)*N + y*n;
 				float* rgb = gb + ((k*N + x*n)*s + j)*N + y*n;
+
+
 				// read A and B
 
-				coprthr2_event_t ev0,ev1;
+				coprthr_event_t ev0,ev1;
 
-				ev1 = __coprthr2_memcopy2d_align(b,rgb, n*sizeof(float),
+				ev1 = coprthr_memcopy2d_align(b,rgb, n*sizeof(float),
 					s*N*sizeof(float), n*sizeof(float), n,
 					COPRTHR2_M_DMA_1|COPRTHR2_E_NOWAIT);
 
-				ev0 = __coprthr2_memcopy2d_align(a,rga, n*sizeof(float),
+				ev0 = coprthr_memcopy2d_align(a,rga, n*sizeof(float),
 					s*N*sizeof(float), n*sizeof(float), n,
 					COPRTHR2_M_DMA_0|COPRTHR2_E_NOWAIT);
 
-				__coprthr2_wait(ev1);
-				__coprthr2_wait(ev0);
+				coprthr_wait(ev1);
+				coprthr_wait(ev0);
 
-				int loop;
-				for (loop=0;loop<LOOP3;loop++) {
-					MatrixMatrixMultiply(n,d,a,b,c,comm_2d);
-				}
+
+				MatrixMatrixMultiply(n,d,a,b,c,comm_2d);
+
 			}
+
 			// write C
-			__coprthr2_memcopy2d_align(rgc,c,s*N*sizeof(float),n*sizeof(float),
+			coprthr_memcopy2d_align(rgc,c,s*N*sizeof(float),n*sizeof(float),
 				n*sizeof(float),n,COPRTHR2_M_DMA_1);
+
 		}
 	}
-} // end LOOP1
 
 	coprthr_tls_brk(memfree);
 
 	MPI_Finalize();
 
-	unsigned int ctime2 = coprthr_ctimer_get();
-	host_printf("ctimer %d %d\n",ctime1,ctime2);
-
 }
 
-/*void MatrixMultiply(int n, float *a, float *b, float *c)
-{
-	int i, j, k;
-	for (i=0; i<n; i++)
-		for (j=0; j<n; j++) {
-			for (k=0; k<n; k++) {
-				c[i*n+j] += a[i*n+k]*b[k*n+j];
-			}
-		}
-}*/
 
 void MatrixMultiply(int n, float *a, float *b, float *c)
 //void __usrmem_call MatrixMultiply(int n, float *a, float *b, float *c)
-//void __dynamic_call MatrixMultiply(int n, float *a, float *b, float *c)
 {
 	int i, j, k;
 	for (i=0; i<n; i+=4) {

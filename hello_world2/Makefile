@@ -1,7 +1,9 @@
 
 CCFLAGS += -O2 $(DEFS) -g
 INCS = -I. -I/usr/local/browndeer/coprthr2/include 
-LIBS = -L/usr/local/browndeer/coprthr2/lib -lcoprthr -lcoprthrcc -lm -ldl
+#LIBS = -L/usr/local/browndeer/coprthr2/lib -lcoprthr -lcoprthrcc -lm -ldl
+#LIBS = -L/usr/local/browndeer/coprthr2/lib -lcoprthr -lcoprthrcc -lm -ldl
+LIBS = -L/usr/local/browndeer/coprthr2/lib -lcoprthr -lcoprthrcc 
 
 COPRCC_FLAGS = 
 COPRCC_DEFS = $(DEFS) 

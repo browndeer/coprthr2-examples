@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,9 +8,8 @@
 
 #include "coprthr.h"
 #include "coprthr_cc.h"
-#include "coprthr_thread.h"
+//#include "coprthr_thread.h"
 #include "coprthr_mpi.h"
-
 
 float f2(int n) {
 	float x = (float)n;
@@ -27,7 +27,7 @@ float f4(int n) {
 	return (x*(x+1.0f)*(2.0f*x+1.0f)*(3.0f*x*x+3.0f*x-1.0f)/30.0f);
 }
 
-struct my_args { int n; int s; int d; float* ga; float* gb; float* gc; };
+struct my_args { int n; int s; int d; float* a; float* b; float* c; };
 
 int main(int argc, char* argv[])
 {
@@ -86,17 +86,27 @@ int main(int argc, char* argv[])
 	float* bb = (float*)malloc(N*N*sizeof(float));
 	float* cc = (float*)malloc(N*N*sizeof(float));
 
-	/* allocate device-shared memory */
+	/* allocate memory on device and write a value */
 	size_t size_device_mem = s*s*n*n*sizeof(float);
-	float* tmpa = (float*)coprthr_dmalloc2(dd,size_device_mem,0);
-	float* tmpb = (float*)coprthr_dmalloc2(dd,size_device_mem,0);
-	float* tmpc = (float*)coprthr_dmalloc2(dd,size_device_mem,0);
+	coprthr_mem_t tmpa_mem = coprthr_dmalloc(dd,size_device_mem,0);
+	coprthr_mem_t tmpb_mem = coprthr_dmalloc(dd,size_device_mem,0);
+	coprthr_mem_t tmpc_mem = coprthr_dmalloc(dd,size_device_mem,0);
+
+//	float* tmpa = (float*)malloc(size_device_mem);
+//	float* tmpb = (float*)malloc(size_device_mem);
+//	float* tmpc = (float*)malloc(size_device_mem);
+	float* tmpa = (float*)coprthr_memptr(tmpa_mem,0);
+	float* tmpb = (float*)coprthr_memptr(tmpb_mem,0);
+	float* tmpc = (float*)coprthr_memptr(tmpc_mem,0);
 	
 	struct my_args args = {
 		.n = n, .s = s, .d = d,
-		.ga = tmpa,
-		.gb = tmpb,
-		.gc = tmpc};
+//		.ga = coprthr_memptr(ga_mem,0),
+//		.gb = coprthr_memptr(gb_mem,0),
+//		.gc = coprthr_memptr(gc_mem,0)};
+		.a = tmpa,
+		.b = tmpb,
+		.c = tmpc};
 
 	/* initialize A, B, and C matrices */
 	for (i=0; i<N; i++) {
@@ -118,20 +128,29 @@ int main(int argc, char* argv[])
 			size_t row_size = s*n*sizeof(float);
 			int nrows = s*n;
 			for(row=0;row<nrows;row++) {
-				memcpy(tmpc + row*n*s, cc + ((i*nrows+row)*s2 + j)*nrows, row_size);
+//				memcpy(tmpc + row*n*s, gc + ((i*nrows+row)*s2 + j)*nrows,row_size);
+				memcpy(tmpc + row*n*s, cc + ((i*nrows+row)*s2 + j)*nrows,row_size);
 			}
-
+//			coprthr_dwrite(dd, gc_mem, 0, tmpc, nrows*row_size, COPRTHR_E_WAIT);
+			
 			for(k=0;k<s2;k++) {
 				for(row=0;row<nrows;row++) {
+//					memcpy(tmpa+row*n*s, ga+((i*nrows+row)*s2 + k)*nrows, row_size);
+//					memcpy(tmpb+row*n*s, gb+((k*nrows+row)*s2 + j)*nrows, row_size);
 					memcpy(tmpa+row*n*s, aa+((i*nrows+row)*s2 + k)*nrows, row_size);
 					memcpy(tmpb+row*n*s, bb+((k*nrows+row)*s2 + j)*nrows, row_size);
 				}
+//				coprthr_dwrite(dd, ga_mem, 0, tmpa, nrows*row_size, COPRTHR_E_WAIT);
+//				coprthr_dwrite(dd, gb_mem, 0, tmpb, nrows*row_size, COPRTHR_E_WAIT);
+
+
 
 				/* execute thread function */
 				coprthr_mpiexec( dd, d*d, thr, &args, sizeof(struct my_args),0 );
 			}
-
+//			coprthr_dread(dd, gc_mem, 0, tmpc, nrows*row_size, COPRTHR_E_WAIT);
 			for(row=0;row<nrows;row++) {
+//				memcpy(gc+((i*nrows+row)*s2 + j)*nrows, tmpc+row*n*s, row_size);
 				memcpy(cc+((i*nrows+row)*s2 + j)*nrows, tmpc+row*n*s, row_size);
 			}
 		}
@@ -158,5 +177,9 @@ int main(int argc, char* argv[])
 	printf("main: # errors: %d\n", errors);
 
 	/* clean up */
+	coprthr_dfree(dd,tmpa_mem);
+	coprthr_dfree(dd,tmpb_mem);
+	coprthr_dfree(dd,tmpc_mem);
+
 	coprthr_dclose(dd);
 }
