@@ -1,0 +1,5 @@
+Simple example of adding two vectors in parallel on coprocessor.
+
+$ make
+$ ./addvec.x
+
