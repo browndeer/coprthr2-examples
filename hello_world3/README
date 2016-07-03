@@ -1,4 +1,5 @@
-A "hello, world" C program showing Pthreads-style interface to coprocessor
+A "hello, world" C program showing dexec() interface to coprocessor and
+Pthread-style arguments are used.
 
 $ make
 $ ./hello_host.x
