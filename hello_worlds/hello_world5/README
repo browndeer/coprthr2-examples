@@ -1,0 +1,5 @@
+The standard MPI "hello, world" C program.
+
+$ make
+$ ./hello_mpi.x						# serial execution on coprocessor
+$ coprsh -nc 16 ./hello_mpi.x		# parallel execution on coprocessor

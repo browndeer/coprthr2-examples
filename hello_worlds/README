@@ -1,0 +1,9 @@
+
+The different Hello, World examples show variations of compilation model 
+
+hello_world1	host-executable main function (executed on coprocessor)
+hello_world2	main function executed from host code with dexecv()
+hello_world3	thread function executed from host code with dexec()
+hello_world4	Pthread interface to coprocessor
+hello_world5	MPI example
+
