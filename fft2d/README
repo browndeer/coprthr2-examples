@@ -1,0 +1,12 @@
+
+2D FFT example using threaded MPI
+
+make
+./main.x [options]
+
+options:
+-n [on-chip fft dimension]
+-d [eCore dimension]
+-l [artificial loop iterations]
+
+
