@@ -1,0 +1,5 @@
+Simple example showing memory allocation and memory copy to/from coprocessor
+
+$ make
+$ ./memory.x
+
